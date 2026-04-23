@@ -14,3 +14,14 @@ export const errorResponse = (status: number, code: string, message: string) =>
     },
     { status }
   );
+
+export const readJson = async <T>(request: Request) => {
+  try {
+    return { ok: true as const, value: (await request.json()) as T };
+  } catch {
+    return {
+      ok: false as const,
+      response: errorResponse(400, "INVALID_JSON", "Request body must be valid JSON"),
+    };
+  }
+};
