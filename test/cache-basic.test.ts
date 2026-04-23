@@ -23,6 +23,15 @@ describe("basic cache operations", () => {
       expirationTtl: 3600,
       value: "payload",
     });
+    expect(harness.kv.snapshot("meta:article:1")).toEqual({
+      expirationTtl: 3600,
+      value: expect.any(String),
+    });
+    expect(JSON.parse(harness.kv.snapshot("meta:article:1")!.value)).toEqual({
+      ttl: 3600,
+      logicalExpireAt: expect.any(Number),
+      updatedAt: expect.any(Number),
+    });
 
     const getResponse = await harness.fetch("/v1/cache/article%3A1", {
       headers: authHeaders(),
@@ -103,6 +112,27 @@ describe("basic cache operations", () => {
       error: {
         code: "INVALID_VALUE",
         message: "value must be a string",
+      },
+    });
+  });
+
+  it("rejects null payload bodies with a 400 response", async () => {
+    const harness = createHarness();
+
+    const response = await harness.fetch("/v1/cache/article%3A4", {
+      method: "PUT",
+      headers: {
+        ...authHeaders(),
+        "content-type": "application/json",
+      },
+      body: "null",
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "INVALID_BODY",
+        message: "Request body must be an object",
       },
     });
   });

@@ -20,7 +20,7 @@ export const putCache = async (kv: KVNamespace, key: string, value: string, ttl:
 };
 
 export const readCache = async (kv: KVNamespace, key: string) => {
-  const [value] = await Promise.all([kv.get(dataKey(key)), kv.get(metaKey(key))]);
+  const [value, metadataValue] = await Promise.all([kv.get(dataKey(key)), kv.get(metaKey(key))]);
 
   if (value === null) {
     return {
@@ -31,6 +31,7 @@ export const readCache = async (kv: KVNamespace, key: string) => {
 
   return {
     hit: true as const,
+    metadata: metadataValue === null ? null : (JSON.parse(metadataValue) as CacheMetadata),
     value,
   };
 };

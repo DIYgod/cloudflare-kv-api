@@ -51,6 +51,14 @@ export const fetchHandler: ExportedHandler<Env>["fetch"] = async (request, env) 
       return parsedBody.response;
     }
 
+    if (
+      parsedBody.value === null ||
+      typeof parsedBody.value !== "object" ||
+      Array.isArray(parsedBody.value)
+    ) {
+      return errorResponse(400, "INVALID_BODY", "Request body must be an object");
+    }
+
     const { ttl, value } = parsedBody.value;
 
     if (!Number.isInteger(ttl) || ttl <= 0) {
