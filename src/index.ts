@@ -82,7 +82,14 @@ export const fetchHandler: ExportedHandler<Env>["fetch"] = async (request, env, 
     }
 
     if (url.searchParams.get("refresh") === "1" && result.metadata) {
-      ctx.waitUntil(putCache(env.CACHE_KV, parsedKey.key, result.value, result.metadata.ttl));
+      ctx.waitUntil(
+        (async () => {
+          const current = await readCache(env.CACHE_KV, parsedKey.key);
+          if (current.hit && current.metadata) {
+            await putCache(env.CACHE_KV, parsedKey.key, current.value, current.metadata.ttl);
+          }
+        })()
+      );
     }
 
     return json({ hit: true, value: result.value });
