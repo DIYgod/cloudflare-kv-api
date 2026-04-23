@@ -18,7 +18,7 @@ const TOUCH_ROUTE = /^\/v1\/cache\/([^/]+)\/touch$/;
 const isObjectBody = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 
-export const fetchHandler: ExportedHandler<Env>["fetch"] = async (request, env) => {
+export const fetchHandler: ExportedHandler<Env>["fetch"] = async (request, env, ctx) => {
   const url = new URL(request.url);
 
   if (request.method === "GET" && url.pathname === "/health") {
@@ -80,6 +80,11 @@ export const fetchHandler: ExportedHandler<Env>["fetch"] = async (request, env) 
     if (!result.hit) {
       return json(result.expired ? { hit: false, expired: true } : { hit: false }, { status: 404 });
     }
+
+    if (url.searchParams.get("refresh") === "1" && result.metadata) {
+      ctx.waitUntil(putCache(env.CACHE_KV, parsedKey.key, result.value, result.metadata.ttl));
+    }
+
     return json({ hit: true, value: result.value });
   }
 
