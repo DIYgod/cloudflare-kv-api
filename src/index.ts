@@ -69,7 +69,7 @@ export const fetchHandler: ExportedHandler<Env>["fetch"] = async (request, env) 
         return errorResponse(400, "INVALID_TTL", "touch requires ttl when metadata is missing");
       }
 
-      return new Response(null, { status: 404 });
+      return json(result.expired ? { hit: false, expired: true } : { hit: false }, { status: 404 });
     }
 
     return new Response(null, { status: 204 });

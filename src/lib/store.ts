@@ -14,6 +14,20 @@ const buildMetadata = (ttl: number, now: number): CacheMetadata => ({
   updatedAt: now,
 });
 
+const parseMetadata = (metadataRaw: string): CacheMetadata | null => {
+  try {
+    const metadata = JSON.parse(metadataRaw) as Partial<CacheMetadata>;
+
+    if (typeof metadata.logicalExpireAt !== "number" || !Number.isFinite(metadata.logicalExpireAt)) {
+      return null;
+    }
+
+    return metadata as CacheMetadata;
+  } catch {
+    return null;
+  }
+};
+
 export const putCache = async (kv: KVNamespace, key: string, value: string, ttl: number, now = Date.now()) => {
   const metadata = buildMetadata(ttl, now);
   const expirationTtl = kvExpirationTtl(ttl);
@@ -42,7 +56,15 @@ export const readCache = async (kv: KVNamespace, key: string, now = Date.now()) 
     };
   }
 
-  const metadata = JSON.parse(metadataRaw) as CacheMetadata;
+  const metadata = parseMetadata(metadataRaw);
+
+  if (!metadata) {
+    return {
+      hit: true as const,
+      metadata: null,
+      value,
+    };
+  }
 
   if (metadata.logicalExpireAt <= now) {
     return {
