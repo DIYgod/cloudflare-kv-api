@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "cloudflare-kv-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-23",
+  "kv_namespaces": [
+    {
+      "binding": "CACHE_KV",
+      "id": "00000000000000000000000000000000",
+      "preview_id": "00000000000000000000000000000000"
+    }
+  ]
+}
