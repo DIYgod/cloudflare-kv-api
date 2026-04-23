@@ -25,3 +25,23 @@ export const readJson = async <T>(request: Request) => {
     };
   }
 };
+
+export const readOptionalJson = async <T>(request: Request) => {
+  if (!request.body) {
+    return { ok: true as const, value: {} as T };
+  }
+
+  const text = await request.text();
+  if (!text) {
+    return { ok: true as const, value: {} as T };
+  }
+
+  try {
+    return { ok: true as const, value: JSON.parse(text) as T };
+  } catch {
+    return {
+      ok: false as const,
+      response: errorResponse(400, "INVALID_JSON", "Request body must be valid JSON"),
+    };
+  }
+};

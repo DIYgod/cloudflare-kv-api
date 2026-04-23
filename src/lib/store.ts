@@ -6,21 +6,26 @@ export type CacheMetadata = {
   updatedAt: number;
 };
 
+const kvExpirationTtl = (ttl: number) => Math.max(ttl, 60);
+
+const buildMetadata = (ttl: number, now: number): CacheMetadata => ({
+  ttl,
+  logicalExpireAt: now + ttl * 1000,
+  updatedAt: now,
+});
+
 export const putCache = async (kv: KVNamespace, key: string, value: string, ttl: number, now = Date.now()) => {
-  const metadata: CacheMetadata = {
-    ttl,
-    logicalExpireAt: now + ttl * 1000,
-    updatedAt: now,
-  };
+  const metadata = buildMetadata(ttl, now);
+  const expirationTtl = kvExpirationTtl(ttl);
 
   await Promise.all([
-    kv.put(dataKey(key), value, { expirationTtl: ttl }),
-    kv.put(metaKey(key), JSON.stringify(metadata), { expirationTtl: ttl }),
+    kv.put(dataKey(key), value, { expirationTtl }),
+    kv.put(metaKey(key), JSON.stringify(metadata), { expirationTtl }),
   ]);
 };
 
-export const readCache = async (kv: KVNamespace, key: string) => {
-  const [value, metadataValue] = await Promise.all([kv.get(dataKey(key)), kv.get(metaKey(key))]);
+export const readCache = async (kv: KVNamespace, key: string, now = Date.now()) => {
+  const [value, metadataRaw] = await Promise.all([kv.get(dataKey(key)), kv.get(metaKey(key))]);
 
   if (value === null) {
     return {
@@ -29,9 +34,50 @@ export const readCache = async (kv: KVNamespace, key: string) => {
     };
   }
 
+  if (!metadataRaw) {
+    return {
+      hit: true as const,
+      metadata: null,
+      value,
+    };
+  }
+
+  const metadata = JSON.parse(metadataRaw) as CacheMetadata;
+
+  if (metadata.logicalExpireAt <= now) {
+    return {
+      hit: false as const,
+      expired: true,
+    };
+  }
+
   return {
     hit: true as const,
-    metadata: metadataValue === null ? null : (JSON.parse(metadataValue) as CacheMetadata),
+    metadata,
     value,
   };
+};
+
+export const touchCache = async (kv: KVNamespace, key: string, ttl: number | undefined, now = Date.now()) => {
+  const current = await readCache(kv, key, now);
+
+  if (!current.hit) {
+    return {
+      ok: false as const,
+      status: 404,
+      expired: current.expired,
+    };
+  }
+
+  const nextTtl = ttl ?? current.metadata?.ttl;
+
+  if (!nextTtl) {
+    return {
+      ok: false as const,
+      status: 400,
+    };
+  }
+
+  await putCache(kv, key, current.value, nextTtl, now);
+  return { ok: true as const };
 };
