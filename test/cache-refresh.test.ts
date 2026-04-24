@@ -93,6 +93,76 @@ describe("GET refresh semantics", () => {
     expect(harness.kv.snapshot("meta:refresh:orphan")).toBeNull();
   });
 
+  it("returns the value without scheduling refresh when metadata is invalid", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-23T00:00:10.000Z"));
+
+    const harness = createHarness();
+
+    await harness.kv.put("data:refresh:invalidmeta", "payload", { expirationTtl: 60 });
+    await harness.kv.put(
+      "meta:refresh:invalidmeta",
+      JSON.stringify({
+        ttl: "bad",
+        updatedAt: "nope",
+        logicalExpireAt: Date.now() + 60_000,
+      }),
+      { expirationTtl: 60 }
+    );
+
+    const originalPut = harness.kv.put.bind(harness.kv);
+    let writesAfterGet = 0;
+
+    harness.kv.put = vi.fn(async (key, value, options) => {
+      writesAfterGet += 1;
+      return originalPut(key, value, options);
+    });
+
+    const response = await harness.fetch("/v1/cache/refresh%3Ainvalidmeta?refresh=1", {
+      headers: authHeaders(),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      hit: true,
+      value: "payload",
+    });
+
+    await harness.waitOnExecutionContext();
+    expect(writesAfterGet).toBe(0);
+  });
+
+  it("throttles refresh=1 background writes when the key was updated too recently", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-23T00:00:10.000Z"));
+
+    const harness = createHarness();
+    await putCache(harness.env.CACHE_KV, "refresh:throttle", "payload", 120, Date.now());
+
+    const originalPut = harness.kv.put.bind(harness.kv);
+    let writesAfterGet = 0;
+
+    harness.kv.put = vi.fn(async (key, value, options) => {
+      writesAfterGet += 1;
+      return originalPut(key, value, options);
+    });
+
+    vi.setSystemTime(new Date("2026-04-23T00:00:10.500Z"));
+
+    const response = await harness.fetch("/v1/cache/refresh%3Athrottle?refresh=1", {
+      headers: authHeaders(),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      hit: true,
+      value: "payload",
+    });
+
+    await harness.waitOnExecutionContext();
+    expect(writesAfterGet).toBe(0);
+  });
+
   it("re-reads the latest cache value before refreshing ttl", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-23T00:00:10.000Z"));

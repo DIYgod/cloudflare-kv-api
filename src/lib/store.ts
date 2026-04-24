@@ -18,11 +18,23 @@ const parseMetadata = (metadataRaw: string): CacheMetadata | null => {
   try {
     const metadata = JSON.parse(metadataRaw) as Partial<CacheMetadata>;
 
+    if (typeof metadata.ttl !== "number" || !Number.isInteger(metadata.ttl) || metadata.ttl <= 0) {
+      return null;
+    }
+
+    if (typeof metadata.updatedAt !== "number" || !Number.isFinite(metadata.updatedAt)) {
+      return null;
+    }
+
     if (typeof metadata.logicalExpireAt !== "number" || !Number.isFinite(metadata.logicalExpireAt)) {
       return null;
     }
 
-    return metadata as CacheMetadata;
+    return {
+      ttl: metadata.ttl,
+      logicalExpireAt: metadata.logicalExpireAt,
+      updatedAt: metadata.updatedAt,
+    };
   } catch {
     return null;
   }

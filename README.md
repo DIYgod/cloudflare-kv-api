@@ -151,4 +151,5 @@ If `ttl` is omitted and metadata is missing, the API returns `400 Bad Request`.
 - TTL values below `60` seconds are implemented with logical expiry metadata.
 - Workers KV is eventually consistent and can serve stale reads shortly after writes.
 - `GET ?refresh=1` is best-effort and may race with concurrent writes because Workers KV has no atomic touch/CAS primitive.
+- Hot `GET ?refresh=1` traffic is throttled to avoid Workers KV same-key write limits (about 1 write/sec). Refresh may be skipped when the key was updated too recently.
 - This service is suitable for RSSHub cache semantics, not for strict distributed-lock guarantees.

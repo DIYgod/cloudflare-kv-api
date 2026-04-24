@@ -15,6 +15,9 @@ type TouchBody = {
 const CACHE_ROUTE = /^\/v1\/cache\/([^/]+)$/;
 const TOUCH_ROUTE = /^\/v1\/cache\/([^/]+)\/touch$/;
 
+// Best-effort guard against Workers KV's "same key writes" rate limit (~1 write/sec).
+const MIN_REFRESH_INTERVAL_MS = 1_000;
+
 const isObjectBody = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 
@@ -81,7 +84,11 @@ export const fetchHandler: ExportedHandler<Env>["fetch"] = async (request, env, 
       return json(result.expired ? { hit: false, expired: true } : { hit: false }, { status: 404 });
     }
 
-    if (url.searchParams.get("refresh") === "1" && result.metadata) {
+    if (
+      url.searchParams.get("refresh") === "1" &&
+      result.metadata &&
+      Date.now() - result.metadata.updatedAt >= MIN_REFRESH_INTERVAL_MS
+    ) {
       ctx.waitUntil(
         (async () => {
           const current = await readCache(env.CACHE_KV, parsedKey.key);

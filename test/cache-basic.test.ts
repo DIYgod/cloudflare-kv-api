@@ -116,6 +116,31 @@ describe("basic cache operations", () => {
     });
   });
 
+  it("rejects overlong keys with a 400 INVALID_KEY response", async () => {
+    const harness = createHarness();
+    const overlongKey = "a".repeat(508);
+
+    const response = await harness.fetch(`/v1/cache/${overlongKey}`, {
+      method: "PUT",
+      headers: {
+        ...authHeaders(),
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        value: "payload",
+        ttl: 3600,
+      }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "INVALID_KEY",
+        message: "Cache key exceeds 507 bytes",
+      },
+    });
+  });
+
   it("rejects null payload bodies with a 400 response", async () => {
     const harness = createHarness();
 

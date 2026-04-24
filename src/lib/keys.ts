@@ -1,6 +1,8 @@
 import { errorResponse } from "./http";
 
-const KEY_MAX_BYTES = 512;
+// Cloudflare Workers KV enforces a 512-byte limit on stored keys.
+// Internal keys are prefixed with "data:" / "meta:" (5 bytes), so the public key must fit within 507 bytes.
+const KEY_MAX_BYTES = 507;
 const RESERVED_PREFIXES = ["data:", "meta:"];
 
 export const dataKey = (key: string) => `data:${key}`;
@@ -35,7 +37,7 @@ export const parseCacheKey = (encodedKey: string) => {
   if (new TextEncoder().encode(key).byteLength > KEY_MAX_BYTES) {
     return {
       ok: false as const,
-      response: errorResponse(400, "INVALID_KEY", "Cache key exceeds 512 bytes"),
+      response: errorResponse(400, "INVALID_KEY", "Cache key exceeds 507 bytes"),
     };
   }
 
