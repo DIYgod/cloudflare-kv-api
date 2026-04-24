@@ -47,7 +47,7 @@ Minimal authenticated HTTP cache API for RSSHub, backed by Cloudflare Workers KV
    wrangler kv namespace create CACHE_KV --preview
    ```
 
-2. Copy the returned IDs into [`wrangler.jsonc`](/Users/diygod/Code/Projects/cloudflare-kv-api/wrangler.jsonc).
+2. Copy the returned IDs into [`wrangler.jsonc`](./wrangler.jsonc).
 
 3. Set the production secret:
 
@@ -70,6 +70,8 @@ All cache endpoints require:
 ```http
 Authorization: Bearer <token>
 ```
+
+`{key}` must be sent as a single URL-encoded path segment. Keys containing `/`, `%`, and other reserved characters must be encoded before calling the API.
 
 ### `GET /health`
 
@@ -140,6 +142,8 @@ Optional request body:
 ```
 
 If `ttl` is omitted, the service reuses the TTL stored in metadata.
+
+If `ttl` is omitted and metadata is missing, the API returns `400 Bad Request`.
 
 ## Important Caveats
 
