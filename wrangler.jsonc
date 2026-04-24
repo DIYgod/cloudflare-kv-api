@@ -2,12 +2,13 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "cloudflare-kv-api",
   "main": "src/index.ts",
+  "account_id": "1f1d1678a2413a54c944b3081bab5c84",
   "compatibility_date": "2026-04-23",
   "kv_namespaces": [
     {
       "binding": "CACHE_KV",
-      "id": "00000000000000000000000000000000",
-      "preview_id": "00000000000000000000000000000000"
+      "id": "cb06bc63fbd24da0bab337be63058446",
+      "preview_id": "d8ac8aae70fa470da9637a181206ffde"
     }
   ]
 }
