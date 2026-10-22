@@ -14,13 +14,15 @@ Minimal authenticated HTTP cache API for RSSHub, backed by Cloudflare Workers KV
 
 ## Local Development
 
+The project uses the [`cf` CLI](https://developers.cloudflare.com/cf/), which requires Node.js 22.23+, 24.22+ or 26.12+.
+
 1. Install dependencies:
 
    ```bash
    npm install
    ```
 
-2. Generate binding types:
+2. Generate binding types into `.cloudflare/types/`:
 
    ```bash
    npm run types
@@ -40,26 +42,23 @@ Minimal authenticated HTTP cache API for RSSHub, backed by Cloudflare Workers KV
 
 ## Cloudflare Setup
 
+The Worker is configured in [`cloudflare.config.ts`](./cloudflare.config.ts).
+
 1. Create the KV namespace:
 
    ```bash
-   wrangler kv namespace create CACHE_KV
-   wrangler kv namespace create CACHE_KV --preview
+   cf kv namespaces create --title cloudflare-kv-api
    ```
 
-2. Copy the returned IDs into [`wrangler.jsonc`](./wrangler.jsonc).
+2. Copy the returned `id` into the `CACHE_KV` binding in [`cloudflare.config.ts`](./cloudflare.config.ts).
 
-3. Set the production secret:
+3. Deploy with the production secret. `API_TOKEN` is declared as a required secret, so the first deploy uploads it from a JSON or `.env` file kept outside the repository:
 
    ```bash
-   wrangler secret put API_TOKEN
+   cf deploy --secrets-file <path-to-secrets-file>
    ```
 
-4. Deploy:
-
-   ```bash
-   wrangler deploy
-   ```
+   Later deploys keep the existing secret, so `cf deploy` is enough. Deploy with `--secrets-file` again to rotate the token.
 
 ## API
 
